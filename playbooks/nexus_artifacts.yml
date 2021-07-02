@@ -1,0 +1,14 @@
+- name: Configure Nexus Repository Server as an Artifact Repository for Ploigos
+  hosts: localhost
+  roles:
+  - role: nexus_artifacts
+    vars:
+      nexus_url: "https://nexus.example.com"
+      # This account must exist, and have admin privileges
+      nexus_username: "admin"
+      nexus_password: "password123"
+
+      # This account will be created by the role
+      ploigos_service_account:
+        username: ploigos
+        password: password123

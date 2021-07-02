@@ -1,0 +1,13 @@
+- hosts: localhost
+  roles:
+  - role: argocd
+    vars:
+      argocd_project_name: "argocd"
+      argocd_cr_name: "argocd"
+      argocd_k8s_api: "https://api.openshift.example.com:6443"
+      argocd_k8s_token: "lkjsdkfj90309unlknf"
+
+      # This account will be created by the role - it need not exist
+      ploigos_service_account:
+        username: ploigos
+        password: password123

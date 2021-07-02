@@ -1,0 +1,14 @@
+- hosts: localhost
+  roles:
+  - role: gitea
+    vars:
+      gitea_url: "{{ all_services_details.gitea.url }}"
+      gitea_username: "{{ all_services_details.gitea.username }}"
+      gitea_password: "{{ all_services_details.gitea.password }}"
+
+      ploigos_service_account:
+        first_name: Ploigos
+        last_name: ServiceAccount
+        username: ploigos
+        password: password123
+        email: ploigos@example.com

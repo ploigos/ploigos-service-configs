@@ -1,0 +1,9 @@
+- hosts: localhost
+  roles:
+  - role: jenkins
+    vars:
+      jenkins_url: "https://jenkins.example.com"
+      jenkins_token: "token"
+      # Obtain this token from the stdout of the gitea playbook
+      jenkins_gitea_token: "token"
+      jenkins_gitea_url: "https://gitea.example.com"

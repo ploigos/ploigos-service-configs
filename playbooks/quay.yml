@@ -1,0 +1,15 @@
+- name: Configure Red Hat Quay as a Container Registry
+  hosts: localhost
+  roles:
+  - role: quay
+    vars:
+      # do not include http/https
+      quay_url: "quay.apps.example.com"
+      # this account must exist, and have admin privileges
+      quay_username: "admin"
+      quay_password: "password123"
+
+      # this account will be created by the role
+      ploigos_service_account:
+        username: ploigos
+        password: password123

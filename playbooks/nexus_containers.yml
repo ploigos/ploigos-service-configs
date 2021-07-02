@@ -1,0 +1,14 @@
+- name: Configure Nexus Repository server as a Container Registry
+  hosts: localhost
+  roles:
+  - role: nexus_containers
+    vars:
+      nexus_server_url: "https://nexus.example.com"
+      # This account must exist, and have admin privileges
+      nexus_username: "admin"
+      nexus_password: "password123"
+
+      # This account will be created by the role
+      ploigos_service_account:
+        username: ploigos
+        password: password123

@@ -1,0 +1,14 @@
+- name: Configure Sonarqube as a Static Code Analysis server for Ploigos
+  hosts: localhost
+  roles:
+  - role: sonarqube
+    vars:
+      sonarqube_url: "https://sonarqube.example.com"
+      # this account must exist, and have admin privileges
+      sonarqube_username: "admin"
+      sonarqube_password: "password123"
+
+      # this account will be created by the role
+      ploigos_service_account:
+        username: ploigos
+        password: password123

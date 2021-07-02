@@ -1,0 +1,9 @@
+- name: Configure Tekton as a Continuous Deployment platform for Ploigos
+  hosts: localhost
+  roles:
+  - role: tekton
+    vars:
+      tekton_k8s_api: "https://api.openshift.example.com:6443"
+      tekton_k8s_token: "token"
+      tekton_chart_state: present
+      tekton_namespace: "tekton"

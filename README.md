@@ -11,6 +11,15 @@ This role configures an instance of ArgoCD for use with Ploigos. After supplying
 ansible-playbook playbooks/argocd.yml
 ```
 
+### gitlab
+This role configures an instance of GitLab for use with Ploigos. Use a playbook like this:
+
+If you're running this locally, the role will print out a **GitLab Access Token** that you'll need to use later. Be sure to store this somewhere safe. After supplying the relevant properties to the playbook, invoke it with:
+
+```bash
+ansible-playbook playbooks/gitlab.yml
+```
+
 ### gitea
 This role configures an instance of Gitea for use with Ploigos. Use a playbook like this:
 

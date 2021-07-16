@@ -5,8 +5,6 @@
 
 - name: Deploy cluster resources chart
   community.kubernetes.helm:
-    api_key: "{{ tekton_k8s_token }}"
-    host: "{{ tekton_k8s_api }}"
     name: ploigos-workflow-tekton-cluster-resources
     chart_ref: ploigos_charts/ploigos-workflow-tekton-cluster-resources
     values: "{{ lookup('template', 'ploigos-cluster-chart-values.yaml.j2') | from_yaml }}"

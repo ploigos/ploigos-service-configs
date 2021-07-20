@@ -71,10 +71,9 @@
     - name: Print access token to stdout
       debug:
         msg: |
-          GITEA ACCESS TOKEN: {{ gitlab_access_token }}
+          GITLAB ACCESS TOKEN: {{ gitlab_access_token }}
 
           Be sure to save this- you'll need it later and you can't view it again from GitLab :-)
-    
 
   - name: Create Organization for Service Account
     uri:

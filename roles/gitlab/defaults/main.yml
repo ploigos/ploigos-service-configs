@@ -1,0 +1,13 @@
+---
+gitlab_url: "{{ all_services_details.gitlab.url }}"
+gitlab_username: "{{ all_services_details.gitlab.username }}"
+gitlab_password: "{{ all_services_details.gitlab.password }}"
+
+oc_cli: /usr/local/bin/oc
+
+ploigos_service_account:
+  first_name: Ploigos
+  last_name: ServiceAccount
+  username: ploigos
+  password: password123
+  email: ploigos@example.com

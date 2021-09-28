@@ -1,9 +1,8 @@
-
-
+---
 - name: Wait for GitLab to respond to requests
   uri:
     url: '{{ gitlab_url }}'
-    validate_certs: no
+    validate_certs: false
   register: _gitlab_endpoint
   until: _gitlab_endpoint.status == 200
   retries: 30
@@ -16,11 +15,13 @@
 - name: Set api creation command
   set_fact:
     gitlab_console_command: >-
-      "token = User.find_by_username('root').personal_access_tokens.create(scopes: [:api, :read_api, :sudo, :read_user],name: 'Automation token'); token.set_token('{{ gitlab_root_token }}'); token.save!"
+      "token = User.find_by_username('root').personal_access_tokens.create(scopes: [:api, :read_api, :sudo, :read_user],name: 'Automation token');
+      token.set_token('{{ gitlab_root_token }}'); token.save!"
 
 - name: Create access token for GitLab root user
   shell: |
     oc='{{ oc_cli }}'
+    set -eo pipefail
     pod=$($oc get pods -n gitlab-system -l app=task-runner -o jsonpath='{.items[0].metadata.name}')
     output=$($oc exec $pod -n gitlab-system -c task-runner -- gitlab-rails runner {{ gitlab_console_command }} 2>&1 >/dev/null)
     if [ ! -z "$output" ]; then
@@ -34,15 +35,17 @@
     fi
     echo $output
   register: gitlab_token
+  args:
+    executable: /bin/bash
   failed_when: '"failed" in gitlab_token.stdout_lines'
   changed_when: '"changed" in gitlab_token.stdout_lines'
 
 - name: Check for existing Service Account for GitLab
   uri:
     url: '{{ gitlab_url }}/api/v4/users?username={{ ploigos_service_account.username }}'
-    validate_certs: no
+    validate_certs: false
     method: GET
-    return_content: yes
+    return_content: true
     body_format: json
     headers:
       PRIVATE-TOKEN: "{{ gitlab_root_token }}"
@@ -51,7 +54,7 @@
 
 - name: Set GitLab User info
   set_fact:
-      gitlab_user_info: "{{ gitlab_user_check_response.json[0] }}"
+    gitlab_user_info: "{{ gitlab_user_check_response.json[0] }}"
   when: gitlab_user_check_response.json != []
 
 - name: Create GitLab Service Account if it doesn't exist
@@ -59,7 +62,7 @@
     - name: Create Service Account for GitLab
       uri:
         url: '{{ gitlab_url }}/api/v4/users'
-        validate_certs: no
+        validate_certs: false
         body_format: json
         method: POST
         headers:
@@ -83,9 +86,9 @@
 - name: Check Service Account token is present
   uri:
     url: '{{ gitlab_url }}/api/v4/personal_access_tokens?user_id={{ gitlab_user_info.id }}'
-    validate_certs: no
+    validate_certs: false
     method: GET
-    return_content: yes
+    return_content: true
     body_format: json
     headers:
       PRIVATE-TOKEN: "{{ gitlab_root_token }}"
@@ -96,8 +99,8 @@
   block:
     - name: Create Application Token for GitLab
       uri:
-        url: '{{gitlab_url}}/api/v4/users/{{ gitlab_user_info.id }}/personal_access_tokens'
-        validate_certs: no
+        url: '{{ gitlab_url }}/api/v4/users/{{ gitlab_user_info.id }}/personal_access_tokens'
+        validate_certs: false
         body_format: json
         method: POST
         headers:
@@ -117,20 +120,19 @@
       block:
       # Create a Secret to hold the GitLab Access Token if this role is run by
       # the operator.
-      - name: Create GitLab token secret
-        k8s:
-          definition: "{{ lookup('template', 'gitlab-token-secret.yml.j2') }}"
+        - name: Create GitLab token secret
+          k8s:
+            definition: "{{ lookup('template', 'gitlab-token-secret.yml.j2') }}"
       rescue:
-      - name: Print access token to stdout
-        debug:
-          msg: |
-            GitLab ACCESS TOKEN: {{ gitlab_access_token }}
-      
+        - name: Print access token to stdout
+          debug:
+            msg: |
+              GitLab ACCESS TOKEN: {{ gitlab_access_token }}
 
     - name: Create Group for Service Account
       uri:
         url: '{{ gitlab_url }}/api/v4/groups'
-        validate_certs: no
+        validate_certs: false
         body_format: json
         method: POST
         headers:
@@ -146,9 +148,10 @@
       changed_when: response.status == 201
   when: gitlab_access_token_response.json == []
 
-- name: Revoke access token for root user
+- name: Revoke access token for GitLab root user
   shell: |
     oc='{{ oc_cli }}'
     pod=$($oc get pods -n gitlab-system -l app=task-runner -o jsonpath='{.items[0].metadata.name}')
     $oc exec $pod -n gitlab-system -c task-runner -- gitlab-rails runner "token = PersonalAccessToken.find_by_token('{{ gitlab_root_token }}');token.revoke!"
- 
+  register: gitlab_revoke_token
+  changed_when: gitlab_token.stdout_lines == []

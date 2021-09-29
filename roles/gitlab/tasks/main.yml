@@ -8,38 +8,6 @@
   retries: 30
   delay: 5
 
-- name: Generate root token
-  set_fact:
-    gitlab_root_token: "{{ lookup('password', '/dev/null length=15 chars=ascii_letters') }}"
-
-- name: Set api creation command
-  set_fact:
-    gitlab_console_command: >-
-      "token = User.find_by_username('root').personal_access_tokens.create(scopes: [:api, :read_api, :sudo, :read_user],name: 'Automation token');
-      token.set_token('{{ gitlab_root_token }}'); token.save!"
-
-- name: Create access token for GitLab root user
-  shell: |
-    oc='{{ oc_cli }}'
-    set -eo pipefail
-    pod=$($oc get pods -n gitlab-system -l app=task-runner -o jsonpath='{.items[0].metadata.name}')
-    output=$($oc exec $pod -n gitlab-system -c task-runner -- gitlab-rails runner {{ gitlab_console_command }} 2>&1 >/dev/null)
-    if [ ! -z "$output" ]; then
-      if echo "$output" | grep -q 'already exist'; then
-          echo ok
-      else
-          echo failed
-      fi
-    else
-      echo changed
-    fi
-    echo $output
-  register: gitlab_token
-  args:
-    executable: /bin/bash
-  failed_when: '"failed" in gitlab_token.stdout_lines'
-  changed_when: '"changed" in gitlab_token.stdout_lines'
-
 - name: Check for existing Service Account for GitLab
   uri:
     url: '{{ gitlab_url }}/api/v4/users?username={{ ploigos_service_account.username }}'
@@ -147,11 +115,3 @@
       register: response
       changed_when: response.status == 201
   when: gitlab_access_token_response.json == []
-
-- name: Revoke access token for GitLab root user
-  shell: |
-    oc='{{ oc_cli }}'
-    pod=$($oc get pods -n gitlab-system -l app=task-runner -o jsonpath='{.items[0].metadata.name}')
-    $oc exec $pod -n gitlab-system -c task-runner -- gitlab-rails runner "token = PersonalAccessToken.find_by_token('{{ gitlab_root_token }}');token.revoke!"
-  register: gitlab_revoke_token
-  changed_when: gitlab_token.stdout_lines == []

@@ -1,7 +1,6 @@
 ---
 gitlab_url: "{{ all_services_details.gitlab.url }}"
-gitlab_username: "{{ all_services_details.gitlab.username }}"
-gitlab_password: "{{ all_services_details.gitlab.password }}"
+gitlab_root_token: "{{ all_services_details.gitlab.api_token }}"
 
 oc_cli: /usr/local/bin/oc
 

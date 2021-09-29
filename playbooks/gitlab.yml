@@ -3,8 +3,7 @@
   - role: gitlab
     vars:
       gitlab_url: "{{ all_services_details.gitlab.url }}"
-      gitab_username: "{{ all_services_details.gitlab.username }}"
-      gitlab_password: "{{ all_services_details.gitlab.password }}"
+      gitlab_root_token: "{{ all_services_details.gitlab.api_token }}"
 
       ploigos_service_account:
         first_name: Ploigos

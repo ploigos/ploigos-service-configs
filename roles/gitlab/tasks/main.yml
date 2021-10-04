@@ -112,6 +112,34 @@
           path: "Red_Hat"
           visibility: "public"
         status_code: 201,422
-      register: response
-      changed_when: response.status == 201
+      register: group_creation_response
+      changed_when: group_creation_response.status == 201
+
+    - name: Get group information
+      uri:
+        url: '{{ gitlab_url }}/api/v4/groups/{{ group_creation_response.json.id }}'
+        validate_certs: false
+        body_format: json
+        method: Get
+        headers:
+          PRIVATE-TOKEN: "{{ gitlab_access_token }}"
+        status_code: 200
+      register: group_check_response
+
+    - name: Grab token from response
+      set_fact:
+        gitlab_runner_token: '{{ group_check_response.json.runners_token }}'
+
+    - name: Store GitLab runner token
+      block:
+      # Create a Secret to hold the GitLab Access Token if this role is run by
+      # the operator.
+        - name: Create GitLab token secret
+          k8s:
+            definition: "{{ lookup('template', 'gitlab-runner-token-secret.yml.j2') }}"
+      rescue:
+        - name: Print access token to stdout
+          debug:
+            msg: |
+              GitLab RUNNER TOKEN: {{ gitlab_runner_token }}
   when: gitlab_access_token_response.json == []

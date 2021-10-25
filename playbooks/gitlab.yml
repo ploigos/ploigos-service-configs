@@ -1,0 +1,13 @@
+- hosts: localhost
+  roles:
+  - role: gitlab
+    vars:
+      gitlab_url: "{{ all_services_details.gitlab.url }}"
+      gitlab_root_token: "{{ all_services_details.gitlab.api_token }}"
+
+      ploigos_service_account:
+        first_name: Ploigos
+        last_name: ServiceAccount
+        username: ploigos
+        password: password123
+        email: ploigos@example.com

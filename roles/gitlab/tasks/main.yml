@@ -1,0 +1,145 @@
+---
+- name: Wait for GitLab to respond to requests
+  uri:
+    url: '{{ gitlab_url }}'
+    validate_certs: false
+  register: _gitlab_endpoint
+  until: _gitlab_endpoint.status == 200
+  retries: 30
+  delay: 5
+
+- name: Check for existing Service Account for GitLab
+  uri:
+    url: '{{ gitlab_url }}/api/v4/users?username={{ ploigos_service_account.username }}'
+    validate_certs: false
+    method: GET
+    return_content: true
+    body_format: json
+    headers:
+      PRIVATE-TOKEN: "{{ gitlab_root_token }}"
+    status_code: 200
+  register: gitlab_user_check_response
+
+- name: Set GitLab User info
+  set_fact:
+    gitlab_user_info: "{{ gitlab_user_check_response.json[0] }}"
+  when: gitlab_user_check_response.json != []
+
+- name: Create GitLab Service Account if it doesn't exist
+  block:
+    - name: Create Service Account for GitLab
+      uri:
+        url: '{{ gitlab_url }}/api/v4/users'
+        validate_certs: false
+        body_format: json
+        method: POST
+        headers:
+          PRIVATE-TOKEN: "{{ gitlab_root_token }}"
+        body:
+          email: '{{ ploigos_service_account.email }}'
+          name: "{{ ploigos_service_account.first_name + ' ' + ploigos_service_account.last_name }}"
+          reset_password: false
+          password: '{{ ploigos_service_account.password }}'
+          username: '{{ ploigos_service_account.username }}'
+          skip_confirmation: true
+        status_code: 201,422
+      register: gitlab_user_response
+      changed_when: gitlab_user_response.status == 201
+
+    - name: Set GitLab User info
+      set_fact:
+        gitlab_user_info: "{{ gitlab_user_response.json }}"
+  when: gitlab_user_check_response.json == []
+
+- name: Check Service Account token is present
+  uri:
+    url: '{{ gitlab_url }}/api/v4/personal_access_tokens?user_id={{ gitlab_user_info.id }}'
+    validate_certs: false
+    method: GET
+    return_content: true
+    body_format: json
+    headers:
+      PRIVATE-TOKEN: "{{ gitlab_root_token }}"
+    status_code: 200
+  register: gitlab_access_token_response
+
+- name: Create GitLab access token if it doesn't exist
+  block:
+    - name: Create Application Token for GitLab
+      uri:
+        url: '{{ gitlab_url }}/api/v4/users/{{ gitlab_user_info.id }}/personal_access_tokens'
+        validate_certs: false
+        body_format: json
+        method: POST
+        headers:
+          PRIVATE-TOKEN: "{{ gitlab_root_token }}"
+        body:
+          name: ploigos-platform-token
+          scopes: [api, read_user, read_api, read_repository, write_repository]
+        status_code: 201,422
+      register: token_creation_response
+      changed_when: token_creation_response.status == 201
+
+    - name: Grab token from response
+      set_fact:
+        gitlab_access_token: '{{ token_creation_response.json.token }}'
+
+    - name: Store GitLab access token
+      block:
+      # Create a Secret to hold the GitLab Access Token if this role is run by
+      # the operator.
+        - name: Create GitLab token secret
+          k8s:
+            definition: "{{ lookup('template', 'gitlab-token-secret.yml.j2') }}"
+      rescue:
+        - name: Print access token to stdout
+          debug:
+            msg: |
+              GitLab ACCESS TOKEN: {{ gitlab_access_token }}
+
+    - name: Create Group for Service Account
+      uri:
+        url: '{{ gitlab_url }}/api/v4/groups'
+        validate_certs: false
+        body_format: json
+        method: POST
+        headers:
+          PRIVATE-TOKEN: "{{ gitlab_access_token }}"
+          Content-Type: "application/json"
+        body:
+          description: "Ploiogos Platform Organization"
+          name: "platform"
+          path: "Red_Hat"
+          visibility: "public"
+        status_code: 201,422
+      register: group_creation_response
+      changed_when: group_creation_response.status == 201
+
+    - name: Get group information
+      uri:
+        url: '{{ gitlab_url }}/api/v4/groups/{{ group_creation_response.json.id }}'
+        validate_certs: false
+        body_format: json
+        method: Get
+        headers:
+          PRIVATE-TOKEN: "{{ gitlab_access_token }}"
+        status_code: 200
+      register: group_check_response
+
+    - name: Grab token from response
+      set_fact:
+        gitlab_runner_token: '{{ group_check_response.json.runners_token }}'
+
+    - name: Store GitLab runner token
+      block:
+      # Create a Secret to hold the GitLab Access Token if this role is run by
+      # the operator.
+        - name: Create GitLab token secret
+          k8s:
+            definition: "{{ lookup('template', 'gitlab-runner-token-secret.yml.j2') }}"
+      rescue:
+        - name: Print access token to stdout
+          debug:
+            msg: |
+              GitLab RUNNER TOKEN: {{ gitlab_runner_token }}
+  when: gitlab_access_token_response.json == []

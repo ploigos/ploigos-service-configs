@@ -4,6 +4,15 @@ This collection enables configuration of services to work with [Ploigos](https:/
 
 Supported components appear below. See the `playbooks` directory in this collection for usage notes and examples.
 
+## Prerequisites
+
+Some of the included roles use the devsecops-api command:
+```bash
+pip install devsecops-api
+```
+
+## Roles
+
 ### argocd
 This role configures an instance of ArgoCD for use with Ploigos. After supplying the relevant properties to the playbook, invoke it with:
 

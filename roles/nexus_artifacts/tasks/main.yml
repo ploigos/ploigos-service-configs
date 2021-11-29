@@ -5,8 +5,8 @@
     status_code: [200,401]
   register: _nexus_endpoint
   until: '_nexus_endpoint.status in [200,401]'
-  retries: 1
-  delay: 1
+  retries: 30
+  delay: 5
 
 - name: Create ploigos Service Account
   shell: >

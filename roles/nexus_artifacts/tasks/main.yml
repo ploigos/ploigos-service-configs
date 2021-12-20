@@ -15,6 +15,9 @@
     --login-username {{ nexus_username }} --login-password {{ nexus_password }}
     --usernames "{{ ploigos_service_account.username }}"
     --passwords "{{ ploigos_service_account.password }}"
+  register: created_nexus_service_account
+  changed_when: created_nexus_service_account.stdout_lines|to_json|from_json|json_query("[?ends_with(@, ` added`)]")|length > 0
+  failed_when: created_nexus_service_account.stdout_lines|to_json|from_json|json_query("[?ends_with(@, ` failed`)]")|length > 0 or created_nexus_service_account.rc != 0
 
 - name: Change the settings on the maven-releases repo to allow artifacts to be overwritten
   shell: >-
@@ -44,3 +47,41 @@
   - container-image-signatures
   - result-artifacts-archive
   - workflow-evidence
+
+- name: Add npm repository
+  shell: >-
+    devsecops-api nexus add-npm-repository
+    {{ nexus_url }}
+    --login-username '{{ nexus_username }}' --login-password '{{ nexus_password }}'
+    --repository-names 'npm-internal'
+  register: updated_npm_repo
+  # https://github.com/ansible/ansible/issues/27299
+  # to_json|from_json| is a terrible hack but here we are
+  changed_when: updated_npm_repo.stdout_lines|to_json|from_json|json_query("[?ends_with(@, ` added`)]")|length > 0
+  failed_when: updated_npm_repo.stdout_lines|to_json|from_json|json_query("[?ends_with(@, ` failed`)]")|length > 0 or updated_npm_repo.rc != 0
+
+- name: Create npm-publisher role
+  shell: >-
+    devsecops-api nexus add-role
+    {{ nexus_url }}
+    --login-username '{{ nexus_username }}' --login-password '{{ nexus_password }}'
+    --role-id 'npm-publisher'
+    --privileges 'nx-repository-view-npm-*-read,nx-repository-view-npm-*-edit,nx-repository-view-npm-*-browse'
+  register: added_npm_publisher_role
+  # https://github.com/ansible/ansible/issues/27299
+  # to_json|from_json| is a terrible hack but here we are
+  changed_when: added_npm_publisher_role.stdout_lines|to_json|from_json|json_query("[?ends_with(@, ` added`)]")|length > 0
+  failed_when: added_npm_publisher_role.stdout_lines|to_json|from_json|json_query("[?ends_with(@, ` failed`)]")|length > 0 or added_npm_publisher_role.rc != 0
+
+- name: Grant npm-publisher role to user
+  shell: >-
+    devsecops-api nexus grant-role-to-user
+    {{ nexus_url }}
+    --login-username '{{ nexus_username }}' --login-password '{{ nexus_password }}'
+    --role-id 'npm-publisher'
+    --user-name '{{ ploigos_service_account.username }}'
+  register: granted_npm_publisher_role
+  # https://github.com/ansible/ansible/issues/27299
+  # to_json|from_json| is a terrible hack but here we are
+  changed_when: granted_npm_publisher_role.stdout_lines|to_json|from_json|json_query("[?ends_with(@, ` added`)]")|length > 0
+  failed_when: granted_npm_publisher_role.stdout_lines|to_json|from_json|json_query("[?ends_with(@, ` failed`)]")|length > 0 or granted_npm_publisher_role.rc != 0

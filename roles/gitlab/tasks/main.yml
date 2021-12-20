@@ -107,9 +107,9 @@
           PRIVATE-TOKEN: "{{ gitlab_access_token }}"
           Content-Type: "application/json"
         body:
-          description: "Ploiogos Platform Organization"
+          description: "Ploigos Platform Organization"
           name: "platform"
-          path: "Red_Hat"
+          path: "platform"
           visibility: "public"
         status_code: 201,422
       register: group_creation_response
